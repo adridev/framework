@@ -29,14 +29,15 @@ class SubstituteBindings
      * Handle an incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
      * @return mixed
      */
     public function handle($request, Closure $next)
     {
         $route = $request->route();
 
-        $router->substituteBindings($route);
-        $router->substituteImplicitBindings($route);
+        $this->router->substituteBindings($route);
+        $this->router->substituteImplicitBindings($route);
 
         return $next($request);
     }
