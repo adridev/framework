@@ -7,6 +7,7 @@ use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\Middleware\Authorize;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 
 class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
@@ -29,6 +30,8 @@ class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         });
 
         $this->router = new Router(new Dispatcher, $this->container);
+
+        $this->container->singleton(Illuminate\Contracts\Routing\Registrar::class, function () { return $this->router; });
     }
 
     public function testSimpleAbilityUnauthorized()
@@ -76,7 +79,7 @@ class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         });
 
         $this->router->get('users/create', [
-            'middleware' => Authorize::class.':create,App\User',
+            'middleware' => [SubstituteBindings::class, Authorize::class.':create,App\User'],
             'uses' => function () { return 'success'; },
         ]);
 
@@ -116,7 +119,7 @@ class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         });
 
         $this->router->get('posts/{post}/edit', [
-            'middleware' => Authorize::class.':edit,post',
+            'middleware' => [SubstituteBindings::class, Authorize::class.':edit,post'],
             'uses' => function () { return 'success'; },
         ]);
 
@@ -136,7 +139,7 @@ class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         });
 
         $this->router->get('posts/{post}/edit', [
-            'middleware' => Authorize::class.':edit,post',
+            'middleware' => [SubstituteBindings::class, Authorize::class.':edit,post'],
             'uses' => function () { return 'success'; },
         ]);
 

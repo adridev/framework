@@ -8,6 +8,7 @@ use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\ResourceRegistrar;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 class RoutingRouteTest extends PHPUnit_Framework_TestCase
 {
@@ -436,7 +437,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testRouteBinding()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->bind('bar', function ($value) { return strtoupper($value); });
         $this->assertEquals('TAYLOR', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
@@ -444,7 +445,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testRouteClassBinding()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->bind('bar', 'RouteBindingStub');
         $this->assertEquals('TAYLOR', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
@@ -452,7 +453,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testRouteClassMethodBinding()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->bind('bar', 'RouteBindingStub@find');
         $this->assertEquals('dragon', $router->dispatch(Request::create('foo/Dragon', 'GET'))->getContent());
     }
@@ -460,7 +461,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testModelBinding()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelBindingStub');
         $this->assertEquals('TAYLOR', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
@@ -471,7 +472,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testModelBindingWithNullReturn()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelBindingNullStub');
         $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent();
     }
@@ -479,7 +480,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testModelBindingWithCustomNullReturn()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelBindingNullStub', function () { return 'missing'; });
         $this->assertEquals('missing', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
@@ -487,7 +488,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     public function testModelBindingWithBindingClosure()
     {
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelBindingNullStub', function ($value) { return (new RouteModelBindingClosureStub())->findAlternate($value); });
         $this->assertEquals('tayloralt', $router->dispatch(Request::create('foo/TAYLOR', 'GET'))->getContent());
     }
@@ -497,7 +498,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
         $router = new Router(new Dispatcher, $container = new Container);
 
         $container->bind('RouteModelInterface', 'RouteModelBindingStub');
-        $router->get('foo/{bar}', function ($name) { return $name; });
+        $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelInterface');
         $this->assertEquals('TAYLOR', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
@@ -805,8 +806,7 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
 
     public function testRouterFiresRoutedEvent()
     {
-        $events = new Illuminate\Events\Dispatcher();
-        $router = new Router($events);
+        $events = $this->getRouter();
         $router->get('foo/bar', function () { return ''; });
 
         $request = Request::create('http://foo.com/foo/bar', 'GET');
@@ -887,11 +887,14 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     {
         $phpunit = $this;
         $router = $this->getRouter();
-        $router->get('foo/{bar}', function (RoutingTestUserModel $bar) use ($phpunit) {
-            $phpunit->assertInstanceOf(RoutingTestUserModel::class, $bar);
+        $router->get('foo/{bar}', [
+            'middleware' => SubstituteBindings::class,
+            'uses' => function (RoutingTestUserModel $bar) use ($phpunit) {
+                $phpunit->assertInstanceOf(RoutingTestUserModel::class, $bar);
 
-            return $bar->value;
-        });
+                return $bar->value;
+            },
+        ]);
         $this->assertEquals('taylor', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
     }
 
@@ -899,11 +902,14 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
     {
         $phpunit = $this;
         $router = $this->getRouter();
-        $router->get('foo/{bar?}', function (RoutingTestUserModel $bar = null) use ($phpunit) {
-            $phpunit->assertInstanceOf(RoutingTestUserModel::class, $bar);
+        $router->get('foo/{bar?}', [
+            'middleware' => SubstituteBindings::class,
+            'uses' => function (RoutingTestUserModel $bar = null) use ($phpunit) {
+                $phpunit->assertInstanceOf(RoutingTestUserModel::class, $bar);
 
-            return $bar->value;
-        });
+                return $bar->value;
+            },
+        ]);
         $this->assertEquals('taylor', $router->dispatch(Request::create('foo/taylor', 'GET'))->getContent());
 
         $router = $this->getRouter();
@@ -916,7 +922,13 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
 
     protected function getRouter()
     {
-        return new Router(new Illuminate\Events\Dispatcher);
+        $container = new Illuminate\Container\Container;
+
+        $router = new Router(new Illuminate\Events\Dispatcher, $container);
+
+        $container->singleton(Illuminate\Contracts\Routing\Registrar::class, function () use ($router) { return $router; });
+
+        return $router;
     }
 }
 
