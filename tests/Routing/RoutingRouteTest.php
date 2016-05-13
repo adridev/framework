@@ -7,6 +7,7 @@ use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\ResourceRegistrar;
+use Illuminate\Contracts\Routing\Registrar;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 
@@ -495,8 +496,9 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
 
     public function testModelBindingThroughIOC()
     {
-        $router = new Router(new Dispatcher, $container = new Container);
-
+        $container = new Container;
+        $router = new Router(new Dispatcher, $container);
+        $container->singleton(Registrar::class, function () use ($router) { return $router; });
         $container->bind('RouteModelInterface', 'RouteModelBindingStub');
         $router->get('foo/{bar}', ['middleware' => SubstituteBindings::class, 'uses' => function ($name) { return $name; }]);
         $router->model('bar', 'RouteModelInterface');
@@ -806,7 +808,9 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
 
     public function testRouterFiresRoutedEvent()
     {
-        $events = $this->getRouter();
+        $container = new Container;
+        $router = new Router(new Dispatcher, $container);
+        $container->singleton(Registrar::class, function () use ($router) { return $router; });
         $router->get('foo/bar', function () { return ''; });
 
         $request = Request::create('http://foo.com/foo/bar', 'GET');
@@ -922,11 +926,11 @@ class RoutingRouteTest extends PHPUnit_Framework_TestCase
 
     protected function getRouter()
     {
-        $container = new Illuminate\Container\Container;
+        $container = new Container;
 
-        $router = new Router(new Illuminate\Events\Dispatcher, $container);
+        $router = new Router(new Dispatcher, $container);
 
-        $container->singleton(Illuminate\Contracts\Routing\Registrar::class, function () use ($router) { return $router; });
+        $container->singleton(Registrar::class, function () use ($router) { return $router; });
 
         return $router;
     }

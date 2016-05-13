@@ -5,6 +5,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Auth\Access\Gate;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\Middleware\Authorize;
 use Illuminate\Routing\Middleware\SubstituteBindings;
@@ -31,7 +32,7 @@ class FoundationAuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
 
         $this->router = new Router(new Dispatcher, $this->container);
 
-        $this->container->singleton(Illuminate\Contracts\Routing\Registrar::class, function () { return $this->router; });
+        $this->container->singleton(Registrar::class, function () { return $this->router; });
     }
 
     public function testSimpleAbilityUnauthorized()
